@@ -11,7 +11,7 @@ from typing import List, Optional, Union
 
 import httpx
 from httpx import HTTPStatusError
-from ratelimiter import RateLimiter
+from castoredc_api.utils.rate_limiter import RateLimiter
 from tqdm import tqdm
 
 from castoredc_api.client import client_options
@@ -47,13 +47,6 @@ class CastorClient:
         self.sync_rate_limiter = RateLimiter(
             max_calls=client_options.SYNC_LIMIT,
             period=client_options.PERIOD_LIMIT,
-            callback=client_options.limit_callback,
-        )
-
-        self.async_rate_limiter = RateLimiter(
-            max_calls=client_options.ASYNC_LIMIT,
-            period=client_options.PERIOD_LIMIT,
-            callback=client_options.limit_callback,
         )
 
         try:

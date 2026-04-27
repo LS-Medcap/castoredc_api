@@ -1,6 +1,5 @@
 """File to hold settings for interacting with the Castor EDC API."""
 
-import time
 import httpx
 
 MAX_CONNECTIONS = 15
@@ -12,14 +11,13 @@ PERIOD_LIMIT = 600
 ASYNC_LIMIT = SYNC_LIMIT / MAX_CONNECTIONS
 
 
-def limit_callback(until):
-    """Returns time until rate limitation ends"""
-    duration = int(round(until - time.time()))
-    print(f"Rate limited, sleeping for {duration} seconds")
+# def limit_callback(until):
+#     """Returns time until rate limitation ends"""
+#     duration = int(round(until - time.time()))
+#     print(f"Rate limited, sleeping for {duration} seconds")
 
 
 SYNC_OPTIONS = {
     "max_calls": SYNC_LIMIT,
     "period": PERIOD_LIMIT,
-    "callback": limit_callback,
 }
