@@ -1241,27 +1241,12 @@ class CastorClient:
         """Helper function to gather all data when there are multiple pages.
         data_name is that which holds data within ['_embedded'] (ex: 'fields')
         """
-        if params is None:
-            params = [
-                {"page": str(page), "page_size": "1000"} for page in range(2, pages)
-            ]
-        else:
-            params = [
-                {"page": str(page), "page_size": "1000", **params}
-                for page in range(2, pages)
-            ]
-        try:
-            # Test if there is a running event loop
-            # If there is, we can't use async code
-            # Solution for IPython consoles (Jupiter Notebooks, Spyder3)
-            asyncio.get_running_loop()
-            responses = [self.sync_get(url, param) for param in tqdm(params)]
-        except RuntimeError:
-            # No running event loop, free to use async code
-            responses = asyncio.run(self.async_get(url=url, params=params))
-            responses = [self.handle_response(response) for response in responses]
-
-        return responses
+        params_list = [
+            {"page": str(page), "page_size": "1000", **(params or {})}
+            for page in range(2, pages)
+        ]
+        responses = [self.sync_get(url, param) for param in tqdm(params_list)]
+        return [self.handle_response(r) for r in responses]
 
     def request_size(self, endpoint, base=False):
         """Helper function for tests to determine how many items there are per given endpoint"""
@@ -1302,40 +1287,6 @@ class CastorClient:
         print(response.json())
         response.raise_for_status()
         return {"code": response.status_code, "json": response.json()}
-
-    # Asynchronous API Interaction
-    async def async_get(self, url: str, params: list) -> list:
-        """Queries the Castor EDC API on given url with parameters params.
-        Queries the database once for each parameter dict in the params list.
-        Returns a list of responses.
-
-        :param url: the urls for the request
-        :param params: a list of dicts of the parameters to be send with the request
-        """
-        # Split list to handle error when len(tasks) > max_connections
-        chunks = [
-            params[x : x + client_options.MAX_CONNECTIONS]
-            for x in range(0, len(params), client_options.MAX_CONNECTIONS)
-        ]
-        responses = []
-        with self.async_rate_limiter:
-            for idx, chunk in enumerate(chunks):
-                async with httpx.AsyncClient(
-                    headers=self.headers,
-                    timeout=client_options.TIMEOUT,
-                    limits=client_options.LIMITS,
-                ) as client:
-                    tasks = [client.get(url=url, params=param) for param in chunk]
-                    temp_responses = [
-                        await response
-                        for response in tqdm(
-                            asyncio.as_completed(tasks),
-                            total=len(tasks),
-                            desc=f"Async Downloading {idx + 1}/{len(chunks)}",
-                        )
-                    ]
-                    responses = responses + temp_responses
-        return responses
 
     @staticmethod
     def handle_response(response: httpx.Response) -> dict:
